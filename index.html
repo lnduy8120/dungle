@@ -1,0 +1,665 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+	<meta content="text/html; charset=utf-8" http-equiv="content-type">
+	<meta content="width=device-width, initial-scale=1.0" name="viewport">
+	<meta name="description"
+		content="DUY NE - A stunning interactive 3D WebGL world with crystal ball, magic particles and video.">
+	<title>DUY NE</title>
+
+	<link href="css/animate.css" rel="stylesheet">
+	<link href="css/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+	<link href="css/stylesheet.css" rel="stylesheet">
+	<link href="css/custom.css" rel="stylesheet">
+	<!-- Font Awesome 6 -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
+	<!-- Google Font -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+	<script type="importmap">
+	{
+		"imports": {
+			"three":          "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+			"three/addons/":  "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+		}
+	}
+	</script>
+
+	<style>
+		/* ── Loading Screen ─────────────────────────────────────── */
+		#loading-screen {
+			position: fixed;
+			inset: 0;
+			z-index: 999999;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			background: radial-gradient(ellipse at center,
+					#0d0d1f 0%, #050510 60%, #000005 100%);
+			transition: opacity 0.8s ease, visibility 0.8s ease;
+			overflow: hidden;
+		}
+
+		#loading-screen.hidden {
+			opacity: 0;
+			visibility: hidden;
+			pointer-events: none;
+		}
+
+		/* Floating background orbs */
+		.ls-orb {
+			position: absolute;
+			border-radius: 50%;
+			filter: blur(80px);
+			animation: ls-drift 8s ease-in-out infinite alternate;
+			opacity: 0.18;
+		}
+
+		.ls-orb:nth-child(1) {
+			width: 400px;
+			height: 400px;
+			background: #6d28d9;
+			top: -10%;
+			left: -10%;
+			animation-delay: 0s;
+		}
+
+		.ls-orb:nth-child(2) {
+			width: 300px;
+			height: 300px;
+			background: #1d4ed8;
+			bottom: -10%;
+			right: -5%;
+			animation-delay: -3s;
+		}
+
+		.ls-orb:nth-child(3) {
+			width: 250px;
+			height: 250px;
+			background: #0891b2;
+			top: 40%;
+			right: 10%;
+			animation-delay: -5s;
+		}
+
+		@keyframes ls-drift {
+			from {
+				transform: translate(0, 0) scale(1);
+			}
+
+			to {
+				transform: translate(30px, 20px) scale(1.1);
+			}
+		}
+
+		/* Content */
+		.ls-content {
+			position: relative;
+			z-index: 1;
+			text-align: center;
+			padding: 0 20px;
+		}
+
+		/* Title */
+		.ls-title {
+			font-family: 'Inter', sans-serif;
+			font-size: clamp(56px, 12vw, 120px);
+			font-weight: 900;
+			letter-spacing: 0.12em;
+			background: linear-gradient(135deg,
+					#a78bfa 0%, #60a5fa 40%, #34d399 70%, #a78bfa 100%);
+			background-size: 200% 200%;
+			-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+			background-clip: text;
+			animation: ls-shimmer 3s linear infinite;
+			margin-bottom: 8px;
+		}
+
+		@keyframes ls-shimmer {
+			0% {
+				background-position: 0% 50%;
+			}
+
+			100% {
+				background-position: 200% 50%;
+			}
+		}
+
+		.ls-subtitle {
+			font-family: 'Inter', sans-serif;
+			font-size: 14px;
+			letter-spacing: 0.35em;
+			text-transform: uppercase;
+			color: rgba(148, 163, 184, 0.7);
+			margin-bottom: 48px;
+		}
+
+		/* Progress bar */
+		.ls-bar-wrap {
+			width: min(360px, 80vw);
+			height: 4px;
+			background: rgba(255, 255, 255, 0.08);
+			border-radius: 99px;
+			overflow: hidden;
+			margin: 0 auto 14px;
+		}
+
+		.ls-bar {
+			height: 100%;
+			width: 0%;
+			border-radius: 99px;
+			background: linear-gradient(90deg, #a78bfa, #60a5fa, #34d399);
+			background-size: 200% 100%;
+			animation: ls-bar-glow 2s linear infinite;
+			transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+		}
+
+		@keyframes ls-bar-glow {
+			0% {
+				background-position: 0% 0%;
+			}
+
+			100% {
+				background-position: 200% 0%;
+			}
+		}
+
+		.ls-pct {
+			font-family: 'Inter', monospace;
+			font-size: 13px;
+			font-weight: 600;
+			color: #a78bfa;
+			margin-bottom: 8px;
+			letter-spacing: 0.05em;
+			transition: color 0.3s;
+		}
+
+		.ls-status {
+			font-family: 'Inter', sans-serif;
+			font-size: 11px;
+			color: rgba(148, 163, 184, 0.45);
+			letter-spacing: 0.08em;
+			height: 16px;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			max-width: 300px;
+			margin: 0 auto;
+		}
+
+		/* Spinning ring below bar */
+		.ls-ring {
+			width: 36px;
+			height: 36px;
+			border: 2px solid rgba(167, 139, 250, 0.15);
+			border-top-color: #a78bfa;
+			border-radius: 50%;
+			margin: 28px auto 0;
+			animation: ls-spin 1s linear infinite;
+		}
+
+		@keyframes ls-spin {
+			to {
+				transform: rotate(360deg);
+			}
+		}
+
+		:root {
+			--panel-bg: rgba(10, 10, 20, 0.72);
+			--panel-border: rgba(255, 255, 255, 0.12);
+			--accent: #a78bfa;
+			--accent2: #60a5fa;
+			--text-primary: #f1f5f9;
+			--text-muted: #94a3b8;
+			--kbd-bg: rgba(255, 255, 255, 0.10);
+			--kbd-border: rgba(255, 255, 255, 0.22);
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		/* Toggle button ─ bottom-right corner */
+		#controls-toggle {
+			position: fixed;
+			bottom: 24px;
+			right: 24px;
+			z-index: 100000;
+			width: 52px;
+			height: 52px;
+			border-radius: 50%;
+			border: 1.5px solid var(--panel-border);
+			background: var(--panel-bg);
+			backdrop-filter: blur(16px) saturate(180%);
+			-webkit-backdrop-filter: blur(16px) saturate(180%);
+			color: var(--accent);
+			font-size: 20px;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--panel-border);
+			transition: transform 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
+			pointer-events: auto;
+		}
+
+		#controls-toggle:hover {
+			transform: scale(1.1);
+			color: var(--accent2);
+			box-shadow: 0 12px 40px rgba(96, 165, 250, 0.3), 0 0 0 1px rgba(96, 165, 250, 0.35);
+		}
+
+		#controls-toggle.active {
+			color: var(--accent2);
+		}
+
+		/* Panel */
+		#controls-panel {
+			position: fixed;
+			bottom: 88px;
+			right: 24px;
+			z-index: 100000;
+			width: 320px;
+			background: var(--panel-bg);
+			backdrop-filter: blur(24px) saturate(200%);
+			-webkit-backdrop-filter: blur(24px) saturate(200%);
+			border: 1.5px solid var(--panel-border);
+			border-radius: 20px;
+			padding: 22px 24px 20px;
+			font-family: 'Inter', sans-serif;
+			color: var(--text-primary);
+			box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--panel-border);
+			pointer-events: auto;
+
+			/* Hidden by default */
+			opacity: 0;
+			transform: translateY(16px) scale(0.97);
+			pointer-events: none;
+			transition: opacity 0.3s ease, transform 0.3s ease;
+		}
+
+		#controls-panel.visible {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+			pointer-events: auto;
+		}
+
+		/* Panel header */
+		.cp-header {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			margin-bottom: 18px;
+			padding-bottom: 14px;
+			border-bottom: 1px solid var(--panel-border);
+		}
+
+		.cp-header-icon {
+			width: 34px;
+			height: 34px;
+			border-radius: 10px;
+			background: linear-gradient(135deg, var(--accent), var(--accent2));
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 15px;
+			color: #fff;
+			flex-shrink: 0;
+		}
+
+		.cp-title {
+			font-size: 15px;
+			font-weight: 700;
+			letter-spacing: 0.02em;
+			color: var(--text-primary);
+		}
+
+		.cp-subtitle {
+			font-size: 11px;
+			color: var(--text-muted);
+			margin-top: 1px;
+		}
+
+		/* Section label */
+		.cp-section {
+			font-size: 10px;
+			font-weight: 600;
+			letter-spacing: 0.10em;
+			text-transform: uppercase;
+			color: var(--accent);
+			margin: 14px 0 8px;
+		}
+
+		.cp-section:first-of-type {
+			margin-top: 0;
+		}
+
+		/* Row */
+		.cp-row {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 5px 0;
+		}
+
+		.cp-row+.cp-row {
+			border-top: 1px solid rgba(255, 255, 255, 0.05);
+		}
+
+		.cp-desc {
+			font-size: 12.5px;
+			color: var(--text-muted);
+			flex: 1;
+		}
+
+		.cp-keys {
+			display: flex;
+			gap: 4px;
+			align-items: center;
+			flex-shrink: 0;
+		}
+
+		/* Keyboard key badge */
+		kbd {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-width: 26px;
+			height: 24px;
+			padding: 0 7px;
+			border-radius: 6px;
+			background: var(--kbd-bg);
+			border: 1px solid var(--kbd-border);
+			border-bottom-width: 2px;
+			font-family: 'Inter', monospace;
+			font-size: 11px;
+			font-weight: 600;
+			color: var(--text-primary);
+			letter-spacing: 0;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+		}
+
+		/* Mouse icon rows */
+		.cp-mouse-icon {
+			color: var(--text-primary);
+			font-size: 13px;
+		}
+
+		/* Separator */
+		.cp-divider {
+			height: 1px;
+			background: var(--panel-border);
+			margin: 12px 0;
+		}
+
+		/* Audio toggle button */
+		#audio-toggle {
+			position: fixed;
+			bottom: 24px;
+			right: 84px;
+			/* sits to the left of the ? button */
+			z-index: 100000;
+			width: 52px;
+			height: 52px;
+			border-radius: 50%;
+			border: 1.5px solid var(--panel-border);
+			background: var(--panel-bg);
+			backdrop-filter: blur(16px) saturate(180%);
+			-webkit-backdrop-filter: blur(16px) saturate(180%);
+			color: var(--text-muted);
+			font-size: 20px;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--panel-border);
+			transition: transform 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
+			pointer-events: auto;
+		}
+
+		#audio-toggle:hover {
+			transform: scale(1.1);
+			color: #34d399;
+			box-shadow: 0 12px 40px rgba(52, 211, 153, 0.3), 0 0 0 1px rgba(52, 211, 153, 0.35);
+		}
+
+		#audio-toggle.on {
+			color: #34d399;
+			box-shadow: 0 8px 32px rgba(52, 211, 153, 0.25), 0 0 0 1px rgba(52, 211, 153, 0.3);
+		}
+
+		/* Pulsing ring when audio is ON */
+		#audio-toggle.on::before {
+			content: '';
+			position: absolute;
+			inset: -6px;
+			border-radius: 50%;
+			border: 2px solid rgba(52, 211, 153, 0.5);
+			animation: audio-pulse 1.4s ease-out infinite;
+		}
+
+		@keyframes audio-pulse {
+			0% {
+				transform: scale(1);
+				opacity: 0.7;
+			}
+
+			100% {
+				transform: scale(1.55);
+				opacity: 0;
+			}
+		}
+
+		.cp-footer {
+			margin-top: 14px;
+			padding-top: 12px;
+			border-top: 1px solid var(--panel-border);
+			font-size: 11px;
+			color: var(--text-muted);
+			display: flex;
+			align-items: center;
+			gap: 6px;
+		}
+
+		.cp-footer i {
+			color: var(--accent);
+		}
+	</style>
+</head>
+
+<body>
+
+	<div class="wrapper" id="container" style="z-index: 99999; pointer-events: none">
+		<div id="ThreeJS"
+			style="position: absolute; left:0px; top:0px; width:100%; height:100%; z-index: 999; pointer-events: auto;">
+		</div>
+		<script type="module" src="js/main.js"></script>
+	</div>
+
+	<!-- ══ Loading Screen ════════════════════════════════════════════════════ -->
+	<div id="loading-screen">
+		<!-- Background glow orbs -->
+		<div class="ls-orb"></div>
+		<div class="ls-orb"></div>
+		<div class="ls-orb"></div>
+
+		<div class="ls-content">
+			<div class="ls-title">DUY NE</div>
+			<div class="ls-subtitle">3D WebGL World</div>
+
+			<div class="ls-bar-wrap">
+				<div class="ls-bar" id="ls-bar"></div>
+			</div>
+			<div class="ls-pct" id="ls-pct">0%</div>
+			<div class="ls-status" id="ls-status">Đang tải tài nguyên…</div>
+			<div class="ls-ring"></div>
+		</div>
+	</div>
+
+	<script>
+		// ── Loading screen logic ──────────────────────────────────────────────
+		const lsScreen = document.getElementById('loading-screen');
+		const lsBar = document.getElementById('ls-bar');
+		const lsPct = document.getElementById('ls-pct');
+		const lsStatus = document.getElementById('ls-status');
+
+		document.addEventListener('loading-progress', e => {
+			const { pct, filename } = e.detail;
+			lsBar.style.width = pct + '%';
+			lsPct.textContent = pct + '%';
+			lsStatus.textContent = filename || 'Đang tải…';
+			if (pct >= 100) lsPct.style.color = '#34d399'; // green at 100%
+		});
+
+		document.addEventListener('loading-complete', () => {
+			// Small delay so user sees 100% for a moment
+			setTimeout(() => {
+				lsScreen.classList.add('hidden');
+				// Remove from DOM after transition ends to free memory
+				lsScreen.addEventListener('transitionend', () => lsScreen.remove(), { once: true });
+			}, 600);
+		});
+
+		// Fallback: if no assets trigger the manager (e.g. all cached),
+		// hide after 3 seconds regardless
+		setTimeout(() => {
+			if (!lsScreen.classList.contains('hidden')) {
+				lsBar.style.width = '100%';
+				lsPct.textContent = '100%';
+				setTimeout(() => lsScreen.classList.add('hidden'), 400);
+			}
+		}, 3000);
+	</script>
+
+	<!-- ══ Audio Toggle Button ══════════════════════════════════════════════ -->
+	<button id="audio-toggle" title="Bật / tắt âm thanh" aria-label="Toggle audio" aria-pressed="false">
+		<i class="fa-solid fa-music"></i>
+	</button>
+
+	<!-- ══ Controls Help Panel ══════════════════════════════════════════════ -->
+	<button id="controls-toggle" title="Hướng dẫn điều khiển" aria-label="Mở bảng hướng dẫn">
+		<i class="fa-solid fa-circle-question"></i>
+	</button>
+
+	<div id="controls-panel" role="dialog" aria-label="Bảng hướng dẫn điều khiển">
+
+		<!-- Header -->
+		<div class="cp-header">
+			<div class="cp-header-icon"><i class="fa-solid fa-gamepad"></i></div>
+			<div>
+				<div class="cp-title">Hướng dẫn điều khiển</div>
+				<div class="cp-subtitle">DUY NE · 3D WebGL World</div>
+			</div>
+		</div>
+
+		<!-- Camera section -->
+		<div class="cp-section"><i class="fa-solid fa-video" style="margin-right:5px"></i>Camera</div>
+
+		<div class="cp-row">
+			<span class="cp-desc">Xoay góc nhìn</span>
+			<span class="cp-keys cp-mouse-icon"><i class="fa-solid fa-computer-mouse"></i> Kéo</span>
+		</div>
+		<div class="cp-row">
+			<span class="cp-desc">Phóng to / Thu nhỏ</span>
+			<span class="cp-keys cp-mouse-icon"><i class="fa-solid fa-computer-mouse"></i> Cuộn</span>
+		</div>
+		<div class="cp-row">
+			<span class="cp-desc">Bay về phía trước</span>
+			<span class="cp-keys"><kbd>F</kbd> Giữ</span>
+		</div>
+		<div class="cp-row">
+			<span class="cp-desc">Toàn màn hình</span>
+			<span class="cp-keys"><kbd>Z</kbd></span>
+		</div>
+
+		<!-- Video section -->
+		<div class="cp-section" style="margin-top:16px"><i class="fa-solid fa-film" style="margin-right:5px"></i>Video
+		</div>
+
+		<div class="cp-row">
+			<span class="cp-desc">Phát video</span>
+			<span class="cp-keys"><kbd>P</kbd></span>
+		</div>
+		<div class="cp-row">
+			<span class="cp-desc">Tạm dừng</span>
+			<span class="cp-keys"><kbd>Space</kbd></span>
+		</div>
+		<div class="cp-row">
+			<span class="cp-desc">Dừng &amp; về đầu</span>
+			<span class="cp-keys"><kbd>S</kbd></span>
+		</div>
+		<div class="cp-row">
+			<span class="cp-desc">Tua lại đầu</span>
+			<span class="cp-keys"><kbd>R</kbd></span>
+		</div>
+
+		<!-- Footer -->
+		<div class="cp-footer">
+			<i class="fa-solid fa-circle-info"></i>
+			Nhấn <kbd style="margin:0 4px">?</kbd> để ẩn / hiện bảng này
+		</div>
+	</div>
+
+	<script>
+		// ── Audio toggle button ───────────────────────────────────────────────
+		const audioBtn = document.getElementById('audio-toggle');
+
+		audioBtn.addEventListener('click', () => {
+			// Dispatch to the ES module (main.js) which handles Web Audio API
+			document.dispatchEvent(new CustomEvent('toggle-audio'));
+		});
+
+		// React to state changes fired back from main.js
+		document.addEventListener('audio-state', e => {
+			const isOn = e.detail;
+			audioBtn.classList.toggle('on', isOn);
+			audioBtn.setAttribute('aria-pressed', isOn);
+			audioBtn.title = isOn ? 'Tắt âm thanh' : 'Bật âm thanh';
+			// Swap icon: music note ↔ music-slash
+			audioBtn.querySelector('i').className = isOn
+				? 'fa-solid fa-music'
+				: 'fa-solid fa-volume-xmark';
+		});
+
+		// Toggle panel visibility
+		const toggleBtn = document.getElementById('controls-toggle');
+		const panel = document.getElementById('controls-panel');
+
+		function togglePanel() {
+			const isOpen = panel.classList.toggle('visible');
+			toggleBtn.classList.toggle('active', isOpen);
+			toggleBtn.setAttribute('aria-expanded', isOpen);
+		}
+
+		toggleBtn.addEventListener('click', togglePanel);
+
+		// Also open/close with the '?' key
+		document.addEventListener('keydown', e => {
+			if (e.key === '?' || (e.key === '/' && e.shiftKey)) togglePanel();
+		});
+
+		// Show panel briefly on first load as a hint
+		setTimeout(() => {
+			panel.classList.add('visible');
+			toggleBtn.classList.add('active');
+			setTimeout(() => {
+				panel.classList.remove('visible');
+				toggleBtn.classList.remove('active');
+			}, 4000);
+		}, 1200);
+	</script>
+
+	<!-- jQuery 3.7.1 -->
+	<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+	<!-- jQuery Validate 1.21.0 -->
+	<script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.21.0/dist/jquery.validate.min.js"></script>
+	<script src="js/script.js" type="text/javascript"></script>
+
+</body>
+
+</html>
