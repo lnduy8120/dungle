@@ -39,6 +39,8 @@ let _source = null;  // MediaElementAudioSourceNode — created once
 let _analyser = null;  // AnalyserNode
 let _dataArray = null;  // Uint8Array FFT buffer
 let _isReady = false; // true = analyser is connected to speakers
+let _gainNode = null; // GainNode for volume control
+let _targetVolume = 0.5; // Store volume state
 
 const HISTORY_LEN = 24;
 const _bassHistory = new Float32Array(HISTORY_LEN);
@@ -100,15 +102,19 @@ export function connectAudio(videoElement) {
             _analyser.fftSize = 256;  // 128 frequency bins
             _analyser.smoothingTimeConstant = 0.78;
 
+            _gainNode = _audioCtx.createGain();
+            _gainNode.gain.value = _targetVolume;
+
             _source.connect(_analyser);
+            _analyser.connect(_gainNode);
             _dataArray = new Uint8Array(_analyser.frequencyBinCount);
         }
 
         // Ensure context is running (Chrome suspends it when tab is hidden)
         if (_audioCtx.state === 'suspended') _audioCtx.resume();
 
-        // (Re-)attach analyser → destination; safe to call multiple times
-        _analyser.connect(_audioCtx.destination);
+        // (Re-)attach gainNode → destination; safe to call multiple times
+        _gainNode.connect(_audioCtx.destination);
 
         // Unmute the video so audio data flows into the Web Audio graph
         videoElement.muted = false;
@@ -133,10 +139,10 @@ export function connectAudio(videoElement) {
  * @param {HTMLVideoElement} videoElement
  */
 export function disconnectAudio(videoElement) {
-    if (_analyser && _audioCtx) {
+    if (_gainNode && _audioCtx) {
         try {
             // Remove only the speaker connection; source → analyser graph intact
-            _analyser.disconnect(_audioCtx.destination);
+            _gainNode.disconnect(_audioCtx.destination);
         } catch (_) { /* already disconnected — ignore */ }
     }
 
@@ -149,6 +155,16 @@ export function disconnectAudio(videoElement) {
 }
 
 export function isAudioConnected() { return _isReady; }
+
+export function setVolume(v) {
+    _targetVolume = Math.max(0, Math.min(1, v));
+    if (_gainNode) {
+        // Use setTargetAtTime to avoid clicks/pops
+        _gainNode.gain.setTargetAtTime(_targetVolume, _audioCtx.currentTime, 0.05);
+    }
+}
+
+export function getVolume() { return _targetVolume; }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FREQUENCY HELPERS

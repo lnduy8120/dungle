@@ -33,7 +33,8 @@ import { initRaycaster, updateRaycasting } from './modules/Raycaster.js';
 import { setupInteractions } from './modules/Interactions.js';
 import {
     initAudioVisualizer, updateAudioVisualizer,
-    connectAudio, disconnectAudio, isBeat, isAudioConnected
+    connectAudio, disconnectAudio, isBeat, isAudioConnected,
+    setVolume, getVolume
 } from './modules/AudioVisualizer.js';
 import { onLoadingProgress, onLoadingComplete } from './modules/Loaders.js';
 
@@ -119,6 +120,11 @@ function init() {
             document.dispatchEvent(new CustomEvent('audio-state', { detail: true }));
         }
     });
+
+    // Listen for volume changes from UI
+    document.addEventListener('volume-change', (e) => {
+        setVolume(e.detail);
+    });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -155,6 +161,16 @@ function update() {
         if (keysPressed[' ']) video.pause();
         if (keysPressed['s']) { video.pause(); video.currentTime = 0; }
         if (keysPressed['r']) video.currentTime = 0;
+
+        // Volume logic
+        if (keysPressed['arrowup'] || keysPressed['+'] || keysPressed['=']) {
+            setVolume(getVolume() + 0.005);
+            document.dispatchEvent(new CustomEvent('volume-sync', { detail: getVolume() }));
+        }
+        if (keysPressed['arrowdown'] || keysPressed['-'] || keysPressed['_']) {
+            setVolume(getVolume() - 0.005);
+            document.dispatchEvent(new CustomEvent('volume-sync', { detail: getVolume() }));
+        }
     }
 
     controls.update(); // required when enableDamping = true

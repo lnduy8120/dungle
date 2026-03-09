@@ -502,6 +502,43 @@
 			margin: 12px 0;
 		}
 
+		/* Volume Slider */
+		#volume-slider {
+			position: fixed;
+			bottom: 40px;
+			right: 156px;
+			/* 84 (audio-toggle right) + 52 (width) + 20 (gap) */
+			z-index: 100000;
+			width: 100px;
+			-webkit-appearance: none;
+			appearance: none;
+			background: var(--kbd-bg);
+			border: 1px solid var(--panel-border);
+			border-radius: 99px;
+			height: 6px;
+			outline: none;
+			pointer-events: auto;
+			transition: opacity 0.3s ease;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+		}
+
+		#volume-slider::-webkit-slider-thumb {
+			-webkit-appearance: none;
+			appearance: none;
+			width: 14px;
+			height: 14px;
+			border-radius: 50%;
+			background: var(--accent);
+			cursor: pointer;
+			box-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
+			transition: transform 0.2s, background 0.2s;
+		}
+
+		#volume-slider::-webkit-slider-thumb:hover {
+			transform: scale(1.2);
+			background: var(--accent2);
+		}
+
 		/* Audio toggle button */
 		#audio-toggle {
 			position: fixed;
@@ -670,7 +707,8 @@
 		}, 3000);
 	</script>
 
-	<!-- ══ Audio Toggle Button ══════════════════════════════════════════════ -->
+	<!-- ══ Audio Toggle Button & Volume Slider ══════════════════════════════════════════════ -->
+	<input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5" title="Điều chỉnh âm lượng">
 	<button id="audio-toggle" title="Bật / tắt âm thanh" aria-label="Toggle audio" aria-pressed="false">
 		<i class="fa-solid fa-music"></i>
 	</button>
@@ -731,6 +769,10 @@
 			<span class="cp-desc">Tua lại đầu</span>
 			<span class="cp-keys"><kbd>R</kbd></span>
 		</div>
+		<div class="cp-row">
+			<span class="cp-desc">Tăng / Giảm âm lượng</span>
+			<span class="cp-keys"><kbd>↑</kbd><kbd>↓</kbd></span>
+		</div>
 
 		<!-- Footer -->
 		<div class="cp-footer">
@@ -759,6 +801,17 @@
 			audioBtn.querySelector('i').className = isOn
 				? 'fa-solid fa-music'
 				: 'fa-solid fa-volume-xmark';
+		});
+
+		// ── Volume slider logic ───────────────────────────────────────────────
+		const volSlider = document.getElementById('volume-slider');
+		volSlider.addEventListener('input', e => {
+			document.dispatchEvent(new CustomEvent('volume-change', { detail: parseFloat(e.target.value) }));
+		});
+
+		// Sync UI when volume is changed via keyboard shortcuts
+		document.addEventListener('volume-sync', e => {
+			volSlider.value = e.detail;
 		});
 
 		// Toggle panel visibility

@@ -12,12 +12,12 @@ export function createScene() {
 
 export function createCamera() {
     const camera = new THREE.PerspectiveCamera(
-        90,
+        80,
         window.innerWidth / window.innerHeight,
         0.1,
         20000
     );
-    camera.position.set(0, 0, 1200);
+    camera.position.set(0, 0, 1000);
     return camera;
 }
 
