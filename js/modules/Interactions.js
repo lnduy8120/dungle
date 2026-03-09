@@ -5,10 +5,6 @@
  *
  * Objects and their behaviours:
  *
- *  Crystal Ball
- *    hover  → glow halo fades in, sphere spins faster
- *    click  → expanding ring ripple effect
- *
  *  Album Cube
  *    hover  → scale up + blue glow outline
  *    click  → full 360° spin
@@ -18,11 +14,6 @@
  */
 
 import { addInteractable } from './Raycaster.js';
-import {
-    getCrystalBallMesh,
-    setCrystalBallHovered,
-    triggerCrystalBallClick
-} from './CrystalBall.js';
 import {
     getAlbumCubes,
     setAlbumCubeHovered,
@@ -39,15 +30,6 @@ import {
  */
 export function setupInteractions(scene, camera) {
 
-    // ── Crystal Ball ─────────────────────────────────────────────────────────
-    const ball = getCrystalBallMesh();
-    if (ball) {
-        addInteractable(ball, {
-            onEnter: () => setCrystalBallHovered(true),
-            onLeave: () => setCrystalBallHovered(false),
-            onClick: () => triggerCrystalBallClick(scene)
-        });
-    }
 
     // ── Album Cube ───────────────────────────────────────────────────────────
     const cubes = getAlbumCubes();

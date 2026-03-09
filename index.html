@@ -5,9 +5,8 @@
 <head>
 	<meta content="text/html; charset=utf-8" http-equiv="content-type">
 	<meta content="width=device-width, initial-scale=1.0" name="viewport">
-	<meta name="description"
-		content="DUY NE - A stunning interactive 3D WebGL world with crystal ball, magic particles and video.">
-	<title>DUY NE</title>
+	<meta name="description" content="Dung Le">
+	<title>Dung Le</title>
 
 	<link href="css/animate.css" rel="stylesheet">
 	<link href="css/font-awesome/css/font-awesome.min.css" rel="stylesheet">
@@ -201,6 +200,112 @@
 			border-radius: 50%;
 			margin: 28px auto 0;
 			animation: ls-spin 1s linear infinite;
+			transition: opacity 0.4s ease;
+		}
+
+		/* ── Enter World button ───────────────────────────── */
+		#ls-enter-btn {
+			display: none;
+			flex-direction: column;
+			align-items: center;
+			gap: 14px;
+			margin: 40px auto 0;
+			border: none;
+			background: none;
+			cursor: pointer;
+			padding: 0;
+			animation: ls-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+		}
+
+		.ls-enter-circle {
+			position: relative;
+			width: 90px;
+			height: 90px;
+			border-radius: 50%;
+			background: linear-gradient(135deg, #a78bfa 0%, #60a5fa 100%);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 32px;
+			color: #fff;
+			box-shadow: 0 0 40px rgba(167, 139, 250, 0.5);
+			transition: transform 0.25s ease, box-shadow 0.25s ease;
+			animation: ls-enter-glow 2s ease-in-out infinite;
+		}
+
+		/* Pulsing halo ring */
+		.ls-enter-circle::before {
+			content: '';
+			position: absolute;
+			inset: -10px;
+			border-radius: 50%;
+			border: 2px solid rgba(167, 139, 250, 0.5);
+			animation: ls-enter-ring 1.8s ease-out infinite;
+		}
+
+		/* Second halo, offset */
+		.ls-enter-circle::after {
+			content: '';
+			position: absolute;
+			inset: -10px;
+			border-radius: 50%;
+			border: 2px solid rgba(96, 165, 250, 0.35);
+			animation: ls-enter-ring 1.8s ease-out infinite 0.6s;
+		}
+
+		#ls-enter-btn:hover .ls-enter-circle {
+			transform: scale(1.1);
+			box-shadow: 0 0 70px rgba(167, 139, 250, 0.85), 0 0 120px rgba(96, 165, 250, 0.4);
+		}
+
+		.ls-enter-label {
+			font-family: 'Inter', sans-serif;
+			font-size: 12px;
+			font-weight: 600;
+			letter-spacing: 0.30em;
+			text-transform: uppercase;
+			color: rgba(167, 139, 250, 0.75);
+			transition: color 0.25s ease;
+		}
+
+		#ls-enter-btn:hover .ls-enter-label {
+			color: rgba(167, 139, 250, 1);
+		}
+
+		@keyframes ls-enter-glow {
+
+			0%,
+			100% {
+				box-shadow: 0 0 35px rgba(167, 139, 250, 0.5);
+			}
+
+			50% {
+				box-shadow: 0 0 65px rgba(167, 139, 250, 0.9), 0 0 100px rgba(96, 165, 250, 0.3);
+			}
+		}
+
+		@keyframes ls-enter-ring {
+			0% {
+				transform: scale(1);
+				opacity: 0.7;
+			}
+
+			100% {
+				transform: scale(1.7);
+				opacity: 0;
+			}
+		}
+
+		@keyframes ls-fade-up {
+			from {
+				opacity: 0;
+				transform: translateY(20px);
+			}
+
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
 		}
 
 		@keyframes ls-spin {
@@ -489,15 +594,24 @@
 		<div class="ls-orb"></div>
 
 		<div class="ls-content">
-			<div class="ls-title">DUY NE</div>
-			<div class="ls-subtitle">3D WebGL World</div>
+			<div class="ls-title">Dung Le</div>
+			<div class="ls-subtitle">Is Whole World</div>
 
-			<div class="ls-bar-wrap">
-				<div class="ls-bar" id="ls-bar"></div>
+			<div id="ls-loading-content">
+				<div class="ls-bar-wrap">
+					<div class="ls-bar" id="ls-bar"></div>
+				</div>
+				<div class="ls-pct" id="ls-pct">0%</div>
+				<div class="ls-status" id="ls-status">Đang tải tài nguyên…</div>
+				<div class="ls-ring" id="ls-ring"></div>
 			</div>
-			<div class="ls-pct" id="ls-pct">0%</div>
-			<div class="ls-status" id="ls-status">Đang tải tài nguyên…</div>
-			<div class="ls-ring"></div>
+
+			<button id="ls-enter-btn" aria-label="Enter World">
+				<div class="ls-enter-circle">
+					<i class="fa-solid fa-play" style="margin-left:5px"></i>
+				</div>
+				<span class="ls-enter-label">Enter World</span>
+			</button>
 		</div>
 	</div>
 
@@ -508,6 +622,22 @@
 		const lsPct = document.getElementById('ls-pct');
 		const lsStatus = document.getElementById('ls-status');
 
+		const lsRing = document.getElementById('ls-ring');
+		const lsLoadingContent = document.getElementById('ls-loading-content');
+		const lsEnterBtn = document.getElementById('ls-enter-btn');
+
+		function _showEnterButton() {
+			// Fade out the entire loading block (bar + % + status + spinner)
+			lsLoadingContent.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+			lsLoadingContent.style.opacity = '0';
+			lsLoadingContent.style.transform = 'translateY(-10px)';
+			setTimeout(() => {
+				lsLoadingContent.style.display = 'none';
+				// Show Enter button — CSS animation kicks in
+				lsEnterBtn.style.display = 'flex';
+			}, 500);
+		}
+
 		document.addEventListener('loading-progress', e => {
 			const { pct, filename } = e.detail;
 			lsBar.style.width = pct + '%';
@@ -517,21 +647,25 @@
 		});
 
 		document.addEventListener('loading-complete', () => {
-			// Small delay so user sees 100% for a moment
-			setTimeout(() => {
-				lsScreen.classList.add('hidden');
-				// Remove from DOM after transition ends to free memory
-				lsScreen.addEventListener('transitionend', () => lsScreen.remove(), { once: true });
-			}, 600);
+			// Small delay so user sees 100% for a moment, then show Enter button
+			setTimeout(_showEnterButton, 600);
+		});
+
+		// Dismiss when the button is clicked
+		lsEnterBtn.addEventListener('click', () => {
+			// Start audio — this click IS the required user gesture for AudioContext
+			document.dispatchEvent(new CustomEvent('toggle-audio'));
+			lsScreen.classList.add('hidden');
+			lsScreen.addEventListener('transitionend', () => lsScreen.remove(), { once: true });
 		});
 
 		// Fallback: if no assets trigger the manager (e.g. all cached),
-		// hide after 3 seconds regardless
+		// show the Enter button after 3 seconds regardless
 		setTimeout(() => {
-			if (!lsScreen.classList.contains('hidden')) {
+			if (!lsScreen.classList.contains('hidden') && lsEnterBtn.style.display === 'none' || lsEnterBtn.style.display === '') {
 				lsBar.style.width = '100%';
 				lsPct.textContent = '100%';
-				setTimeout(() => lsScreen.classList.add('hidden'), 400);
+				setTimeout(_showEnterButton, 400);
 			}
 		}, 3000);
 	</script>
@@ -553,7 +687,7 @@
 			<div class="cp-header-icon"><i class="fa-solid fa-gamepad"></i></div>
 			<div>
 				<div class="cp-title">Hướng dẫn điều khiển</div>
-				<div class="cp-subtitle">DUY NE · 3D WebGL World</div>
+				<div class="cp-subtitle">Dung Le World</div>
 			</div>
 		</div>
 
@@ -606,6 +740,7 @@
 	</div>
 
 	<script>
+
 		// ── Audio toggle button ───────────────────────────────────────────────
 		const audioBtn = document.getElementById('audio-toggle');
 

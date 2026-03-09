@@ -1,6 +1,6 @@
 /**
  * main.js
- * Entry point for the DUY NE 3D world.
+ * Entry point for the Dung Le world.
  *
  * Imports all scene modules and orchestrates the init → animate loop.
  * Each module is responsible for its own Three.js objects; main.js
@@ -20,7 +20,7 @@ import {
 } from './modules/CrystalBall.js';
 import {
     createVideoScreen, updateVideoTexture,
-    getVideoElement
+    getVideoElement, startVideo
 } from './modules/VideoScreen.js';
 import { createText3D, updateText3D } from './modules/Text3D.js';
 import { createAlbumCube, updateAlbumCube } from './modules/AlbumCube.js';
@@ -51,6 +51,7 @@ function init() {
     // Core Three.js objects
     scene = createScene();
     camera = createCamera();
+    camera.layers.enable(1); // layer 1 = album cubes (hidden from CubeCamera / refraction envmap)
     renderer = createRenderer();
     scene.add(camera);
 
@@ -113,6 +114,7 @@ function init() {
             disconnectAudio(video);
             document.dispatchEvent(new CustomEvent('audio-state', { detail: false }));
         } else {
+            startVideo();          // begin video playback on first Enter World click
             connectAudio(video);
             document.dispatchEvent(new CustomEvent('audio-state', { detail: true }));
         }

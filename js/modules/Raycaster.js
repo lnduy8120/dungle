@@ -17,6 +17,7 @@
 import * as THREE from 'three';
 
 const _raycaster = new THREE.Raycaster();
+_raycaster.layers.enable(1); // also test layer 1 (album cubes)
 const _pointer = new THREE.Vector2(-9999, -9999); // start off-screen
 const _registry = []; // Array<{ object, onEnter, onLeave, onClick, _hovered }>
 

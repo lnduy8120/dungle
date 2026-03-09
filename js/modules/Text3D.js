@@ -20,11 +20,11 @@ const FONT_URL =
 // position.x is set to 0 — centering is handled via geometry translation below.
 const TEXT_CONFIGS = [
     {
-        text: 'Hello',
+        text: 'Hello Racing Girl',
         size: 100,
         depth: 20,
         curveSegments: 6,
-        position: [0, 480, 100],
+        position: [0, 600, 100],
         rotation: null,
         hueStart: 0.12,   // gold
         phase: 0

@@ -1,14 +1,33 @@
 import * as THREE from 'three';
 import { textureLoader } from './Loaders.js';
 
-const FACE_TEXTURES = [
+// Full pool of images — all 6 faces of every cube are drawn from this list,
+// offset per cube so each cube shows a unique set of faces.
+const IMAGE_POOL = [
     'images/xpos.png',
     'images/xneg.png',
     'images/ypos.png',
     'images/yneg.png',
-    'images/yneg.png',
-    'images/loichuc.png'
+    'images/zneg.png',
+    'images/zpos.png',
+    'images/loichuc.png',
+    'images/dung/dl1.jpg',
 ];
+
+// Cache loaded textures so the same image is never decoded twice
+const _texCache = {};
+function _getTex(path) {
+    if (!_texCache[path]) _texCache[path] = textureLoader.load(path);
+    return _texCache[path];
+}
+
+/** Build 6 materials for one cube, cycling through IMAGE_POOL from `offset`. */
+function _makeCubeMaterials(offset) {
+    return Array.from({ length: 6 }, (_, face) => {
+        const path = IMAGE_POOL[(offset + face) % IMAGE_POOL.length];
+        return new THREE.MeshBasicMaterial({ map: _getTex(path) });
+    });
+}
 
 let _cubes = [];
 let _glowCubes = [];
@@ -23,25 +42,25 @@ let _orbitPivot = null;
 // CREATE
 // ─────────────────────────────────────────────────────────────────────────────
 export function createAlbumCube(scene) {
-    const materials = FACE_TEXTURES.map(path =>
-        new THREE.MeshBasicMaterial({ map: textureLoader.load(path) })
-    );
-
-    const geometry = new THREE.BoxGeometry(150, 150, 10);
-    const glowGeom = new THREE.BoxGeometry(165, 165, 16);
+    const geometry = new THREE.BoxGeometry(80, 80, 4);
+    const glowGeom = new THREE.BoxGeometry(88, 88, 8);
 
     _orbitPivot = new THREE.Object3D();
     _orbitPivot.position.set(0, 0, 0);
 
-    const radius = 380; // Khoảng cách tới tâm xa hơn
-    const levels = [-180, 0, 180]; // 3 tầng
+    const radius = 320; // inside CrystalBall (r=450); worst-case corner ≈ 394
+    const levels = [-140, 0, 140]; // 3 tầng
     const cubesPerLevel = 6;
+    let cubeIndex = 0; // global counter so each cube gets a unique image offset
 
     for (let j = 0; j < levels.length; j++) {
         const heightY = levels[j];
 
         for (let i = 0; i < cubesPerLevel; i++) {
-            const cube = new THREE.Mesh(geometry, materials);
+            // Each cube gets its own set of 6 face materials, offset by cubeIndex
+            const cubeMats = _makeCubeMaterials(cubeIndex);
+            const cube = new THREE.Mesh(geometry, cubeMats);
+            cubeIndex++;
 
             // Xoay lệch góc giữa các tầng để xếp xen kẽ (so le)
             const angleOffset = (j % 2 === 0) ? 0 : (Math.PI / cubesPerLevel);
@@ -73,7 +92,14 @@ export function createAlbumCube(scene) {
             glowCube.position.copy(cube.position);
             glowCube.rotation.y = cube.rotation.y;
 
+            // Layer 1: visible to main camera but NOT to CubeCamera (layer 0 only).
+            // This prevents the refraction envmap from capturing the cubes,
+            // so they are invisible through the crystal ball from outside.
+            cube.layers.set(1);
+
             _orbitPivot.add(cube);
+
+            glowCube.layers.set(1);
             _orbitPivot.add(glowCube);
 
             _cubes.push(cube);
@@ -108,7 +134,7 @@ export function triggerCubeClick(cube, camera) {
         _activeCube = cube;
 
         if (camera && _orbitPivot) {
-            const distance = 400; // Distance in front of the camera
+            const distance = 300; // Distance in front of the camera
 
             // Calculate direction camera is looking
             const cameraDirection = new THREE.Vector3();
@@ -142,7 +168,7 @@ export function updateAlbumCube() {
 
     // Gentle idle orbit revolution (dừng khi hover hoặc có khối active)
     if (!_isHovered && !_activeCube) {
-        _orbitPivot.rotation.y += 0.006;
+        _orbitPivot.rotation.y += 0.002;
     }
 
     const Z_target = 500;
@@ -204,6 +230,6 @@ export function updateAlbumCube() {
 
         // Glow opacity fade
         const glowMat = glowCube.material;
-        glowMat.opacity += (tGlow - glowMat.opacity) * 0.1;
+        // glowMat.opacity += (tGlow - glowMat.opacity) * 0.1;
     }
 }

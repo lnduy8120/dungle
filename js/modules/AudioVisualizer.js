@@ -57,8 +57,8 @@ function _buildBars(scene) {
         const geo = new THREE.BoxGeometry(BAR_W, 1, BAR_D);
         const mat = new THREE.MeshBasicMaterial({
             color: new THREE.Color().setHSL(i / BAR_COUNT, 1.0, 0.6),
-            transparent: true,
-            opacity: 0.7,
+            transparent: false,
+            opacity: 1,
             blending: THREE.AdditiveBlending,
             depthWrite: false
         });
@@ -188,24 +188,54 @@ export function updateAudioVisualizer(time) {
     const binCount = _analyser ? _analyser.frequencyBinCount : 0;
 
     _bars.forEach((bar, i) => {
-        let height, hue, opacity;
+        let height, opacity;
 
         if (_isReady && _analyser) {
-            // ── Active: frequency-driven bars ────────────────────────────────
+            // ── Active: spectral-heat bars ────────────────────────────────────
             const binIdx = Math.floor((i / BAR_COUNT) * binCount * 0.85);
             const value = _dataArray[binIdx] / 255;
 
             height = value * MAX_HEIGHT + 4;
-            hue = ((i / BAR_COUNT) + time * 0.035) % 1;
-            opacity = 0.35 + value * 0.65;
-            bar.material.color.setHSL(hue, 1.0, 0.48 + value * 0.45);
+
+            // Base hue: full-spectrum rainbow around the ring, slowly rotating
+            const baseHue = (i / BAR_COUNT + time * 0.03) % 1;
+
+            // Amplitude shifts the hue: quiet bars stay true to their base,
+            // loud bars get pushed toward warm (yellow/orange/red) tones.
+            const heatShift = value * 0.18;
+            const hue = (baseHue + heatShift) % 1;
+
+            // Saturation spikes on loud hits; always vivid
+            const sat = 0.85 + value * 0.15;
+
+            // Deep when silent, blazing-bright on peaks
+            const light = 0.22 + value * 0.65;
+
+            opacity = 0.25 + value * 0.75;
+            bar.material.color.setHSL(hue, sat, light);
+
         } else {
-            // ── Idle: gentle travelling wave ─────────────────────────────────
-            const wave = Math.abs(Math.sin(time * 1.2 + i * (Math.PI * 2 / BAR_COUNT)));
-            height = wave * 25 + 5;
-            hue = ((i / BAR_COUNT) + time * 0.025) % 1;
-            opacity = 0.18 + wave * 0.12;
-            bar.material.color.setHSL(hue, 0.6, 0.5);
+            // ── Idle: twin-wave shimmer with two competing hues ───────────────
+            const TWO_PI = Math.PI * 2;
+            const angle = i * (TWO_PI / BAR_COUNT);
+
+            // Wave A — primary, slower
+            const wA = Math.abs(Math.sin(time * 1.0 + angle));
+            // Wave B — slightly faster, offset in phase & angular frequency
+            const wB = Math.abs(Math.sin(time * 1.5 + angle * 1.4 + 1.8));
+
+            const wave = wA * 0.6 + wB * 0.4;
+            height = wave * 32 + 5;
+
+            // Two hue streams rotating in opposite directions
+            const hueA = (i / BAR_COUNT + time * 0.04) % 1;
+            const hueB = (i / BAR_COUNT - time * 0.028 + 0.5) % 1;
+            // Blend them by which wave dominates
+            const blendT = wA / (wA + wB + 0.001);
+            const hue = (hueA * blendT + hueB * (1 - blendT) + 1) % 1;
+
+            opacity = 0.2 + wave * 0.22;
+            bar.material.color.setHSL(hue, 0.95, 0.42 + wave * 0.22);
         }
 
         bar.scale.y = height;

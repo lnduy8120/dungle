@@ -20,7 +20,7 @@ export function createVideoScreen(scene) {
     video.muted = true;        // required for autoplay in modern browsers
     video.playsInline = true;
     video.load();
-    video.play().catch(() => { }); // silent catch for autoplay policy
+    // Video stays paused until the user clicks "Enter World" — startVideo() will be called then.
 
     // ── Canvas texture – Screen 1 ─────────────────────────────────────────────
     const videoCanvas = document.createElement('canvas');
@@ -91,4 +91,11 @@ export function updateVideoTexture() {
 /** Expose the raw <video> element so keyboard controls can play/pause it. */
 export function getVideoElement() {
     return _video;
+}
+
+/** Called once when the user clicks "Enter World" to begin playback. */
+export function startVideo() {
+    if (_video) {
+        _video.play().catch(err => console.warn('[VideoScreen] play() failed:', err));
+    }
 }
