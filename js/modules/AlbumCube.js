@@ -7,7 +7,9 @@ const FRONT_IMAGE_POOL = [
     'images/dung/dl3.jpg',
     'images/dung/dl4.jpg',
     'images/dung/dl5.jpg',
-    'images/dung/dl6.jpg'
+    'images/dung/dl6.jpg',
+    'images/dung/dl7.jpg',
+    'images/dung/dl8.jpg'
 ];
 
 // Pool ảnh cho mặt SAU (face index 5, -Z) của mỗi cube
@@ -58,8 +60,8 @@ function _makeCubeMaterials(offset) {
     return Array.from({ length: 6 }, (_, face) => {
         let path;
         if (face === 4) {
-            // Mặt trước (+Z)
-            path = FRONT_IMAGE_POOL[(offset) % FRONT_IMAGE_POOL.length];
+            // Mặt trước (+Z) — chọn ngẫu nhiên từ FRONT_IMAGE_POOL
+            path = FRONT_IMAGE_POOL[Math.floor(Math.random() * FRONT_IMAGE_POOL.length)];
         } else if (face === 5) {
             // Mặt sau (-Z)
             path = BACK_IMAGE_POOL[(offset) % BACK_IMAGE_POOL.length];
@@ -67,7 +69,9 @@ function _makeCubeMaterials(offset) {
             // Mặt bên (0-3)
             path = FRONT_IMAGE_POOL[(offset + face) % FRONT_IMAGE_POOL.length];
         }
-        return new THREE.MeshBasicMaterial({ map: _getTex(path) });
+        // color nhân với texture → giảm độ sáng mà giữ màu sắc nguyên bản
+        // 0xffffff = 100% | 0xaaaaaa ≈ 67% | 0x888888 = 50% | 0x666666 ≈ 40%
+        return new THREE.MeshBasicMaterial({ map: _getTex(path), color: 0xffffff });
     });
 }
 
