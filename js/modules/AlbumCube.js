@@ -1,30 +1,72 @@
 import * as THREE from 'three';
 import { textureLoader } from './Loaders.js';
 
-// Full pool of images — all 6 faces of every cube are drawn from this list,
-// offset per cube so each cube shows a unique set of faces.
-const IMAGE_POOL = [
-    'images/xpos.png',
-    'images/xneg.png',
-    'images/ypos.png',
-    'images/yneg.png',
-    'images/zneg.png',
-    'images/zpos.png',
-    'images/loichuc.png',
+// Pool ảnh cho mặt TRƯỚC (face index 4, +Z) của mỗi cube
+const FRONT_IMAGE_POOL = [
     'images/dung/dl1.jpg',
+    'images/dung/dl3.jpg',
+    'images/dung/dl4.jpg',
+    'images/dung/dl5.jpg',
+    'images/dung/dl6.jpg'
+];
+
+// Pool ảnh cho mặt SAU (face index 5, -Z) của mỗi cube
+const BACK_IMAGE_POOL = [
+    'images/dung/dl2.jpg'
 ];
 
 // Cache loaded textures so the same image is never decoded twice
 const _texCache = {};
 function _getTex(path) {
-    if (!_texCache[path]) _texCache[path] = textureLoader.load(path);
+    if (!_texCache[path]) {
+        const tex = textureLoader.load(path, (loadedTex) => {
+            // Giữ tỉ lệ gốc của ảnh theo kiểu "cover" (crop giữa)
+            // Mặt cube là hình vuông (80x80) => tỉ lệ mục tiêu = 1:1
+            const imgW = loadedTex.image.width;
+            const imgH = loadedTex.image.height;
+            const imgAspect = imgW / imgH;
+            const targetAspect = 1; // 80/80
+
+            let repeatX = 1, repeatY = 1, offsetX = 0, offsetY = 0;
+            if (imgAspect > targetAspect) {
+                // Ảnh rộng hơn mặt cube → crop hai bên trái/phải
+                repeatX = targetAspect / imgAspect;
+                offsetX = (1 - repeatX) / 2;
+            } else {
+                // Ảnh cao hơn mặt cube → crop trên/dưới
+                repeatY = imgAspect / targetAspect;
+                offsetY = (1 - repeatY) / 2;
+            }
+
+            loadedTex.repeat.set(repeatX, repeatY);
+            loadedTex.offset.set(offsetX, offsetY);
+            loadedTex.needsUpdate = true;
+        });
+        _texCache[path] = tex;
+    }
     return _texCache[path];
 }
 
-/** Build 6 materials for one cube, cycling through IMAGE_POOL from `offset`. */
+/**
+ * Build 6 materials for one cube.
+ * Face indices (THREE.BoxGeometry): 0=+X, 1=-X, 2=+Y, 3=-Y, 4=+Z (front), 5=-Z (back)
+ * - Face 4 → FRONT_IMAGE_POOL
+ * - Face 5 → BACK_IMAGE_POOL
+ * - Face 0-3 → FRONT_IMAGE_POOL (các mặt bên)
+ */
 function _makeCubeMaterials(offset) {
     return Array.from({ length: 6 }, (_, face) => {
-        const path = IMAGE_POOL[(offset + face) % IMAGE_POOL.length];
+        let path;
+        if (face === 4) {
+            // Mặt trước (+Z)
+            path = FRONT_IMAGE_POOL[(offset) % FRONT_IMAGE_POOL.length];
+        } else if (face === 5) {
+            // Mặt sau (-Z)
+            path = BACK_IMAGE_POOL[(offset) % BACK_IMAGE_POOL.length];
+        } else {
+            // Mặt bên (0-3)
+            path = FRONT_IMAGE_POOL[(offset + face) % FRONT_IMAGE_POOL.length];
+        }
         return new THREE.MeshBasicMaterial({ map: _getTex(path) });
     });
 }
