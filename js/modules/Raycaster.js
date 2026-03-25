@@ -30,7 +30,7 @@ let _clickPending = false;
 export function initRaycaster(camera, domElement) {
     _camera = camera;
 
-    // ── Desktop: track mouse position ────────────────────────────────────────
+    // Track normalised device coordinates
     domElement.addEventListener('pointermove', e => {
         const rect = domElement.getBoundingClientRect();
         _pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -44,33 +44,7 @@ export function initRaycaster(camera, domElement) {
     domElement.addEventListener('pointerleave', () => {
         _pointer.set(-9999, -9999);
     });
-
-    // ── Mobile / Touch: update pointer on tap ─────────────────────────────────
-    let _touchStartX = 0;
-    let _touchStartY = 0;
-
-    domElement.addEventListener('touchstart', e => {
-        const touch = e.touches[0];
-        const rect = domElement.getBoundingClientRect();
-        _touchStartX = touch.clientX;
-        _touchStartY = touch.clientY;
-        // Update raycaster pointer immediately on touch down
-        _pointer.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
-        _pointer.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
-    }, { passive: true });
-
-    domElement.addEventListener('touchend', e => {
-        const touch = e.changedTouches[0];
-        const dx = touch.clientX - _touchStartX;
-        const dy = touch.clientY - _touchStartY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        // Only treat as a tap (not a drag/pan) if finger moved < 12px
-        if (dist < 12) {
-            _clickPending = true;
-        }
-    }, { passive: true });
 }
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REGISTER
